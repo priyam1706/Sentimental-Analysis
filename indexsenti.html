@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Social Media Command Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .scrollable-queue {
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        /* Smooth animation for removing items */
+        .resolved-item {
+            opacity: 1; 
+            max-height: 300px; 
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            transition: all 0.5s ease-out;
+        }
+        .resolved-item.hide-me {
+            opacity: 0;
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            margin-bottom: 0;
+            overflow: hidden;
+            border: none;
+        }
+        .tab-button.active {
+            background-color: #4f46e5;
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <h1 class="text-4xl font-extrabold text-gray-900 mb-6 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 text-indigo-600 mr-3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+            AI Social Media Command Center
+        </h1>
+        <p class="text-gray-500 mb-8">Manage content generation, scheduling, and real-time moderation.</p>
+
+        <div class="flex space-x-2 mb-8 p-1 bg-white rounded-xl shadow-lg w-fit">
+            <button id="tab-content" onclick="switchTab('content')"
+                    class="tab-button active py-2 px-4 rounded-lg font-semibold text-sm transition duration-150 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Content Generator
+            </button>
+            <button id="tab-moderation" onclick="switchTab('moderation')"
+                    class="tab-button py-2 px-4 rounded-lg font-semibold text-sm text-gray-600 hover:bg-indigo-50 transition duration-150 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.003 12.003 0 0012 21c5.297 0 10.5-1.077 10.5-2.055v-1H3v1c0 .978 5.203 2.055 10.5 2.055z" />
+                </svg>
+                Moderation Queue
+            </button>
+            <button id="tab-analytics" onclick="switchTab('analytics')"
+                    class="tab-button py-2 px-4 rounded-lg font-semibold text-sm text-gray-600 hover:bg-indigo-50 transition duration-150 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Analytics Dashboard
+            </button>
+        </div>
+
+        <div id="content-tab" class="tab-content">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg h-fit">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Generate Post</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Post Topic / Prompt</label>
+                            <textarea id="postPrompt" rows="3" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g., Announce our new summer sale..."></textarea>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Platform</label>
+                                <select id="postPlatform" class="w-full p-2 border border-gray-300 rounded-lg">
+                                    <option value="Twitter">Twitter</option>
+                                    <option value="Instagram">Instagram</option>
+                                    <option value="LinkedIn">LinkedIn</option>
+                                    <option value="Facebook">Facebook</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Length</label>
+                                <select id="postLength" class="w-full p-2 border border-gray-300 rounded-lg">
+                                    <option value="Short">Short</option>
+                                    <option value="Medium" selected>Medium</option>
+                                    <option value="Long">Long</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Tone</label>
+                            <select id="postTone" class="w-full p-2 border border-gray-300 rounded-lg">
+                                <option value="Professional">Professional</option>
+                                <option value="Casual">Casual</option>
+                                <option value="Excited">Excited</option>
+                                <option value="Urgent">Urgent</option>
+                            </select>
+                        </div>
+
+                        <button id="generateBtn" onclick="generateContent()" 
+                                class="w-full py-3 px-4 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition duration-150 ease-in-out shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                            Generate with AI
+                        </button>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">AI Generated Result</h2>
+                    
+                    <div id="resultContainer" class="bg-gray-50 rounded-lg p-6 min-h-[300px] border-2 border-dashed border-gray-200 flex flex-col justify-center items-center text-center">
+                        <div id="emptyState">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-300 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                            </svg>
+                            <p class="text-gray-500">Ready to generate content.</p>
+                        </div>
+
+                        <div id="generatedContent" class="hidden w-full text-left">
+                            <div class="mb-4">
+                                <span class="text-xs font-semibold tracking-wide uppercase text-gray-400">Post Content</span>
+                                <p id="postText" class="text-lg text-gray-800 mt-1 whitespace-pre-wrap font-medium leading-relaxed"></p>
+                            </div>
+                            <div>
+                                <span class="text-xs font-semibold tracking-wide uppercase text-gray-400">Hashtags</span>
+                                <p id="postHashtags" class="text-indigo-600 font-medium mt-1"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="actionButtons" class="mt-6 hidden">
+                        <button id="scheduleButton" onclick="schedulePost()" disabled
+                            class="mt-4 w-full py-2 px-4 bg-green-500 text-white font-bold rounded-lg hover:bg-green-600 transition duration-150 ease-in-out shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                            Schedule Post (Simulate Timer)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="moderation-tab" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg h-fit">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2 flex items-center">
+                        <span class="bg-purple-100 text-purple-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">SIMULATION</span>
+                        Incoming DM
+                    </h2>
+                    <p class="text-sm text-gray-500 mb-4">Simulate a user sending a Direct Message to test the real-time AI moderation filter.</p>
+                    
+                    <form id="dmForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Sender ID</label>
+                            <input type="text" id="senderId" value="angry_customer_99" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Message</label>
+                            <textarea id="messageText" rows="4" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500" placeholder="Type a message to test (e.g., 'I hate this product')..."></textarea>
+                        </div>
+                        <button type="submit" id="simulateButton"
+                                class="w-full py-2 px-4 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 transition duration-150 shadow-md">
+                            Simulate Incoming Message
+                        </button>
+                    </form>
+                    
+                    <div id="moderationStatus" class="mt-4 text-sm font-medium text-center text-gray-500 min-h-[20px]"></div>
+                </div>
+
+                <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg flex flex-col h-[600px]">
+                    <div class="flex justify-between items-center mb-4 border-b pb-2">
+                        <h2 class="text-xl font-bold text-gray-800 flex items-center">
+                            Manual Review Queue
+                            <span id="queueCount" class="ml-3 bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full">0</span>
+                        </h2>
+                        
+                        <button onclick="showClearConfirmation()" class="text-xs text-red-600 hover:text-red-800 font-semibold hover:underline">
+                            Clear All
+                        </button>
+                    </div>
+
+                    <div id="queueContainer" class="scrollable-queue flex-1 pr-2 space-y-0">
+                        <div class="text-center text-gray-400 py-10">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-2 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <p>All caught up! No messages need review.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="analytics-tab" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        Moderation Performance
+                    </h2>
+                    <div class="grid grid-cols-3 gap-4 mb-6">
+                        <div class="bg-gray-50 p-4 rounded-lg text-center">
+                            <p class="text-xs text-gray-500 uppercase font-semibold">Total Processed</p>
+                            <p id="statsTotalProcessed" class="text-2xl font-bold text-gray-800">-</p>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg text-center">
+                            <p class="text-xs text-gray-500 uppercase font-semibold">Flag Rate</p>
+                            <p id="statsFlagRate" class="text-2xl font-bold text-red-600">-</p>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg text-center">
+                            <p class="text-xs text-gray-500 uppercase font-semibold">Pending Review</p>
+                            <p id="statsQueueSize" class="text-2xl font-bold text-indigo-600">-</p>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-700 mb-3">Risk Level Breakdown</h3>
+                        <div id="riskBreakdown" class="space-y-2 text-sm">
+                            <p class="text-gray-400 italic">Loading stats...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        Content Generation Stats
+                    </h2>
+                    <div class="bg-indigo-50 p-6 rounded-lg text-center mb-6">
+                        <p class="text-sm text-indigo-600 uppercase font-bold">Total Posts Generated</p>
+                        <p id="statsTotalGenerated" class="text-4xl font-extrabold text-indigo-900 mt-2">-</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-6">
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-700 mb-3">By Platform</h3>
+                            <ul id="platformStats" class="space-y-1 text-sm text-gray-600"></ul>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-700 mb-3">By Tone</h3>
+                            <ul id="toneStats" class="space-y-1 text-sm text-gray-600"></ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="customModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full">
+            <h3 id="modalTitle" class="text-xl font-bold text-gray-900 mb-3">Confirm Action</h3>
+            <p id="modalMessage" class="text-gray-700 mb-6">Are you sure?</p>
+            <div class="flex justify-end space-x-3">
+                <button id="modalCancel" class="py-2 px-4 bg-gray-200 text-gray-800 font-medium rounded-lg hover:bg-gray-300 transition">Cancel</button>
+                <button id="modalConfirm" class="py-2 px-4 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition shadow-lg">Yes, Do It</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://127.0.0.1:8000'; 
+        let currentGeneratedContent = null;
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-button').forEach(el => {
+                el.classList.remove('active');
+                el.classList.remove('bg-indigo-600', 'text-white'); 
+                el.classList.add('text-gray-600', 'hover:bg-indigo-50');
+            });
+
+            document.getElementById(`${tabName}-tab`).classList.remove('hidden');
+            const btn = document.getElementById(`tab-${tabName}`);
+            btn.classList.add('active');
+            btn.classList.remove('text-gray-600', 'hover:bg-indigo-50');
+
+            if (tabName === 'moderation') fetchReviewQueue();
+            if (tabName === 'analytics') loadAnalyticsData();
+        }
+
+        async function generateContent() {
+            const prompt = document.getElementById('postPrompt').value;
+            if (!prompt.trim()) { alert('Please enter a topic or prompt.'); return; }
+
+            // REQUEST 1: Make content generator more detailed
+            // We force this by appending instructions to the prompt sent to the backend
+            const detailedPrompt = prompt + " (Please generate a highly detailed, engaging, and comprehensive post with depth.)";
+
+            const generatedPostElement = document.getElementById('postText');
+            const generatedHashtagsElement = document.getElementById('postHashtags');
+            const emptyState = document.getElementById('emptyState');
+            const generatedContentDiv = document.getElementById('generatedContent');
+            const actionButtons = document.getElementById('actionButtons');
+            const scheduleButton = document.getElementById('scheduleButton');
+            const generateButton = document.getElementById('generateBtn');
+            const platform = document.getElementById('postPlatform').value;
+            const length = document.getElementById('postLength').value;
+            const tone = document.getElementById('postTone').value;
+
+            generatedPostElement.textContent = 'Contacting AI for detailed draft...';
+            generatedHashtagsElement.textContent = '';
+            generatedPostElement.classList.add('text-gray-500', 'italic');
+            currentGeneratedContent = null;
+            scheduleButton.disabled = true;
+            scheduleButton.textContent = "Schedule Post"; // Reset text
+            scheduleButton.classList.remove('bg-gray-500', 'cursor-not-allowed');
+            scheduleButton.classList.add('bg-green-500', 'hover:bg-green-600');
+
+            generateButton.disabled = true;
+            generateButton.textContent = 'Generating Detailed Content...';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/content/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        prompt: detailedPrompt, // Sending the modified detailed prompt
+                        length: length,
+                        platform: platform,
+                        tone: tone 
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                currentGeneratedContent = data;
+
+                emptyState.classList.add('hidden');
+                generatedContentDiv.classList.remove('hidden');
+                actionButtons.classList.remove('hidden');
+                generatedPostElement.classList.remove('text-gray-500', 'italic');
+                generatedPostElement.textContent = data.post_content;
+                generatedHashtagsElement.textContent = data.suggested_hashtags.join(' ');
+                scheduleButton.disabled = false;
+
+            } catch (error) {
+                console.error('Error generating content:', error);
+                generatedPostElement.textContent = `Error: ${error.message}`;
+                generatedPostElement.classList.add('text-red-500');
+            } finally {
+                generateButton.disabled = false;
+                generateButton.textContent = 'Generate with AI';
+            }
+        }
+
+        function schedulePost() {
+            const scheduleButton = document.getElementById('scheduleButton');
+            
+            // REQUEST 2: Timer initialization and "Posted" message
+            let countdown = 3; // 3 seconds countdown
+            scheduleButton.disabled = true;
+            
+            // Start visual timer
+            const timer = setInterval(() => {
+                scheduleButton.textContent = `Publishing in ${countdown}s...`;
+                countdown--;
+
+                if (countdown < 0) {
+                    clearInterval(timer);
+                    // Timer fulfilled
+                    scheduleButton.textContent = 'Posted Successfully! 🚀';
+                    scheduleButton.classList.remove('bg-green-500', 'hover:bg-green-600');
+                    scheduleButton.classList.add('bg-gray-500', 'cursor-not-allowed');
+                    
+                    // Simulation of data send
+                    console.log("Scheduled:", currentGeneratedContent);
+                    alert(`Success! Post has been published to ${currentGeneratedContent.platform}.`);
+                }
+            }, 1000);
+        }
+
+        const dmForm = document.getElementById('dmForm');
+        dmForm.addEventListener('submit', simulateDmWebhook);
+
+        async function simulateDmWebhook(e) {
+            e.preventDefault();
+            const senderId = document.getElementById('senderId').value;
+            const messageText = document.getElementById('messageText').value;
+            const simulateButton = document.getElementById('simulateButton');
+            const moderationStatusElement = document.getElementById('moderationStatus');
+
+            simulateButton.disabled = true;
+            simulateButton.textContent = 'Sending...';
+            moderationStatusElement.textContent = 'Analyzing...';
+            moderationStatusElement.className = 'mt-4 text-sm font-medium text-center text-blue-600';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/moderation/simulate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sender_id: senderId, message_text: messageText })
+                });
+
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const result = await response.json();
+                
+                if (result.risk_level && ['HIGH', 'CRITICAL', 'MODERATE'].includes(result.risk_level)) {
+                     moderationStatusElement.textContent = `⚠️ Flagged as ${result.risk_level}! Added to Queue.`;
+                     moderationStatusElement.className = 'mt-4 text-sm font-medium text-center text-red-600';
+                     fetchReviewQueue(); 
+                } else if (result.status === 'SPAM') {
+                     moderationStatusElement.textContent = `🚫 Blocked as SPAM.`;
+                     moderationStatusElement.className = 'mt-4 text-sm font-medium text-center text-red-600';
+                     fetchReviewQueue(); 
+                } else {
+                     moderationStatusElement.textContent = '✅ Passed Moderation.';
+                     moderationStatusElement.className = 'mt-4 text-sm font-medium text-center text-green-600';
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                moderationStatusElement.textContent = 'Error communicating with backend.';
+                moderationStatusElement.className = 'mt-4 text-sm font-medium text-center text-red-600';
+            } finally {
+                simulateButton.disabled = false;
+                simulateButton.textContent = 'Simulate Incoming Message';
+            }
+        }
+
+        async function fetchReviewQueue() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/moderation/queue`);
+                if (!response.ok) throw new Error('Failed to fetch queue');
+                const queue = await response.json();
+                renderQueue(queue);
+            } catch (error) { console.error('Error:', error); }
+        }
+
+        function renderQueue(queue) {
+            const container = document.getElementById('queueContainer');
+            const countBadge = document.getElementById('queueCount');
+            countBadge.textContent = queue.length;
+            container.innerHTML = '';
+
+            if (queue.length === 0) {
+                container.innerHTML = `<div class="text-center text-gray-400 py-10"><p>Queue Clear!</p></div>`;
+                return;
+            }
+
+            queue.forEach(item => {
+                let badgeColor = 'bg-gray-100 text-gray-800';
+                if (item.risk_level === 'CRITICAL' || item.risk_level === 'HIGH') badgeColor = 'bg-red-100 text-red-800';
+                if (item.risk_level === 'MODERATE') badgeColor = 'bg-yellow-100 text-yellow-800';
+                if (item.risk_level === 'LOW') badgeColor = 'bg-green-100 text-green-800';
+
+                // REQUEST 3: ADD EXPLANATION (Why Positive/Negative?)
+                // I added the "🤖 AI Analysis" block below to prominently show the reason.
+                const el = document.createElement('div');
+                el.className = 'resolved-item bg-gray-50 rounded-lg border border-gray-200 p-4 hover:shadow-sm transition duration-200 relative';
+                el.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badgeColor} mb-1">
+                                ${item.risk_level}
+                            </span>
+                            <span class="text-xs text-gray-500 ml-2">${item.timestamp}</span>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button onclick="resolveItem(this, '${item.id}', 'approve')" class="p-1 text-green-600 hover:bg-green-50 rounded" title="Approve">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                            </button>
+                            <button onclick="resolveItem(this, '${item.id}', 'remove')" class="p-1 text-red-600 hover:bg-red-50 rounded" title="Remove">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-900 font-medium mb-1">From: <span class="text-gray-600">${item.sender_id}</span></p>
+                    <p class="text-gray-800 bg-white p-3 rounded border border-gray-200 text-sm mb-3 shadow-sm">"${item.message_text}"</p>
+                    
+                    <div class="bg-indigo-50 border border-indigo-100 p-2 rounded-md">
+                        <p class="text-xs text-indigo-800 leading-relaxed">
+                            <strong class="block mb-1">🤖 AI Analysis (Why ${item.risk_level}?):</strong>
+                            ${item.reason}
+                        </p>
+                    </div>
+                `;
+                container.appendChild(el);
+            });
+        }
+
+        function resolveItem(btnElement, id, action) {
+            const itemCard = btnElement.closest('.resolved-item');
+            itemCard.classList.add('hide-me');
+            setTimeout(() => {
+                itemCard.remove();
+                const countBadge = document.getElementById('queueCount');
+                let current = parseInt(countBadge.textContent);
+                countBadge.textContent = Math.max(0, current - 1);
+                if (document.getElementById('queueContainer').children.length === 0) fetchReviewQueue();
+            }, 500);
+        }
+
+        async function loadAnalyticsData() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/analytics/summary`);
+                if (!response.ok) throw new Error('Failed to fetch analytics');
+                renderAnalytics(await response.json());
+            } catch (error) { console.error('Error:', error); }
+        }
+
+        function renderAnalytics(data) {
+            const modStats = data.moderation_stats;
+            document.getElementById('statsTotalProcessed').textContent = modStats.total_processed;
+            document.getElementById('statsFlagRate').textContent = modStats.flag_rate_percent + '%';
+            document.getElementById('statsQueueSize').textContent = modStats.review_queue_size;
+
+            const riskContainer = document.getElementById('riskBreakdown');
+            riskContainer.innerHTML = '';
+            Object.entries(modStats.risk_counts).forEach(([risk, count]) => {
+                const percentage = ((count / modStats.total_processed) * 100).toFixed(1);
+                let colorClass = risk === 'CRITICAL' || risk === 'HIGH' ? 'bg-red-500' : (risk === 'MODERATE' ? 'bg-yellow-500' : 'bg-green-500');
+                riskContainer.innerHTML += `
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-medium text-gray-600 w-20">${risk}</span>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5 mx-2">
+                            <div class="${colorClass} h-2.5 rounded-full" style="width: ${percentage}%"></div>
+                        </div>
+                        <span class="text-xs font-bold text-gray-700 w-8 text-right">${count}</span>
+                    </div>`;
+            });
+
+            const genStats = data.generation_stats;
+            document.getElementById('statsTotalGenerated').textContent = genStats.total_generated;
+            const pList = document.getElementById('platformStats'); pList.innerHTML = '';
+            Object.entries(genStats.platform_counts).forEach(([p, c]) => pList.innerHTML += `<li class="flex justify-between"><span>${p}</span><span class="font-bold">${c}</span></li>`);
+            const tList = document.getElementById('toneStats'); tList.innerHTML = '';
+            Object.entries(genStats.tone_counts).forEach(([t, c]) => tList.innerHTML += `<li class="flex justify-between"><span>${t}</span><span class="font-bold">${c}</span></li>`);
+        }
+
+        const customModal = document.getElementById('customModal');
+        const modalConfirmButton = document.getElementById('modalConfirm');
+        const modalCancelButton = document.getElementById('modalCancel');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessage = document.getElementById('modalMessage');
+
+        function showClearConfirmation() {
+            modalTitle.textContent = "Clear Review Queue?";
+            modalMessage.textContent = "This will remove all items from the review list.";
+            modalConfirmButton.onclick = clearQueue; 
+            modalCancelButton.onclick = () => customModal.classList.add('hidden');
+            customModal.classList.remove('hidden');
+        }
+
+        async function clearQueue() {
+            customModal.classList.add('hidden');
+            try {
+                await fetch(`${API_BASE_URL}/api/moderation/queue/clear`, { method: 'POST' });
+                fetchReviewQueue();
+            } catch (error) { alert('Failed to clear queue.'); }
+        }
+    </script>
+</body>
+</html>

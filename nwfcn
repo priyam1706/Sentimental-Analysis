@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Social Media Command Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .scrollable-queue {
+            max-height: 80vh; /* Limits the height of the queue container */
+            overflow-y: auto;
+        }
+        /* CSS for the smooth removal animation */
+        .resolved-item {
+            /* Start state for transition */
+            opacity: 1; 
+            max-height: 200px; 
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            /* Apply transitions to all properties that change */
+            transition: opacity 0.5s ease-out, max-height 0.5s ease-out, padding 0.5s ease-out, margin 0.5s ease-out;
+        }
+        .resolved-item.hide-me {
+            /* End state for transition: fade out, collapse, and remove margin/padding */
+            opacity: 0;
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            margin-bottom: 0;
+            overflow: hidden;
+            border: none;
+        }
+        /* Style for the tabs */
+        .tab-button.active {
+            background-color: #4f46e5;
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <h1 class="text-4xl font-extrabold text-gray-900 mb-6 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 text-indigo-600 mr-3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+            AI Social Media Command Center
+        </h1>
+        <p class="text-gray-500 mb-8">Manage content generation, scheduling, and real-time moderation.</p>
+
+        <!-- Tab Navigation -->
+        <div class="flex space-x-2 mb-8 p-1 bg-white rounded-xl shadow-lg w-fit">
+            <button id="tab-content" onclick="switchTab('content')"
+                    class="tab-button active py-2 px-4 rounded-lg font-semibold text-sm transition duration-150 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Content Generator (Objectives 1 & 2)
+            </button>
+            <button id="tab-moderation" onclick="switchTab('moderation')"
+                    class="tab-button py-2 px-4 rounded-lg font-semibold text-sm text-gray-600 hover:bg-indigo-50 transition duration-150 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.003 12.003 0 0012 21c5.297 0 10.5-1.077 12-3.04a11.955 11.955 0 01-5.618-4.016z" />
+                </svg>
+                Moderation Test & Review Queue (Objectives 3 & 4)
+            </button>
+            <button id="tab-analytics" onclick="switchTab('analytics')"
+                    class="tab-button py-2 px-4 rounded-lg font-semibold text-sm text-gray-600 hover:bg-indigo-50 transition duration-150 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Analytics Dashboard (Coming Soon)
+            </button>
+        </div>
+
+        <div id="statusMessage" class="mb-4 p-3 rounded-lg text-sm hidden font-medium"></div>
+
+        <!-- CONTENT GENERATION TAB (Default) -->
+        <div id="content-tab" class="tab-content">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                
+                <!-- Left Panel: Content Generator Form -->
+                <div class="bg-white p-6 rounded-xl shadow-lg h-fit">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-4">Generate & Schedule Posts</h2>
+                    <p class="text-sm text-gray-500 mb-6">Use the Gemini API to generate content and schedule it using the backend API.</p>
+                    
+                    <form id="contentForm">
+                        <div class="mb-4">
+                            <label for="postPrompt" class="block text-sm font-medium text-gray-700 mb-1">Prompt / Topic Idea</label>
+                            <textarea id="postPrompt" rows="3" required 
+                                    class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                                    placeholder="e.g., A post about our new product features, focusing on user benefits."></textarea>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            <div>
+                                <label for="postLength" class="block text-sm font-medium text-gray-700 mb-1">Post Length</label>
+                                <select id="postLength" required 
+                                        class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+                                    <option value="Short">Short (1-2 sentences)</option>
+                                    <option value="Medium" selected>Medium (3-5 sentences)</option>
+                                    <option value="Long">Long (Paragraph)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="postPlatform" class="block text-sm font-medium text-gray-700 mb-1">Platform</label>
+                                <select id="postPlatform" required 
+                                        class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+                                    <option value="Facebook">Facebook</option>
+                                    <option value="Twitter">Twitter / X</option>
+                                    <option value="LinkedIn">LinkedIn</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- NEW: Added Tone selection to match the backend input model -->
+                        <div class="mb-6">
+                            <label for="postTone" class="block text-sm font-medium text-gray-700 mb-1">Post Tone</label>
+                            <select id="postTone" required 
+                                    class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+                                <option value="Excited">Excited and Energetic</option>
+                                <option value="Informative" selected>Informative and Professional</option>
+                                <option value="Humorous">Humorous and Lighthearted</option>
+                                <option value="Serious">Serious and Urgent</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" id="generateButton"
+                                class="w-full py-2 px-4 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition duration-150 ease-in-out shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            Generate Content
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- Right Panel: Generated Post Display -->
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-4">Generated Post & Scheduling</h2>
+                    
+                    <div id="generatedPostContainer" class="p-4 bg-gray-50 border border-gray-200 rounded-lg min-h-[200px] flex flex-col justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500 mb-2">Content Draft:</p>
+                            <div id="generatedPost" class="text-gray-800 whitespace-pre-wrap">Waiting for generation...</div>
+                            <div id="generatedHashtags" class="text-indigo-600 text-sm mt-2 font-mono"></div>
+                        </div>
+                        <div id="schedulingResult" class="mt-4 pt-2 border-t border-gray-200 text-sm text-gray-600 hidden">
+                            <p class="font-semibold">Scheduling Status:</p>
+                            <p id="scheduleMessage" class="mt-1"></p>
+                        </div>
+                    </div>
+                    
+                    <button id="scheduleButton" onclick="schedulePost()" disabled
+                            class="mt-4 w-full py-2 px-4 bg-green-500 text-white font-bold rounded-lg hover:bg-green-600 transition duration-150 ease-in-out shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                        Schedule Generated Post (Objective 2 Mock)
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODERATION TAB -->
+        <div id="moderation-tab" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                <!-- Left Panel: DM Simulation -->
+                <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg h-fit">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-4">Simulate Incoming DM</h2>
+                    <p class="text-sm text-gray-500 mb-6">Test the AI moderation by sending a message.</p>
+                    
+                    <form id="dmForm">
+                        <div class="mb-4">
+                            <label for="senderId" class="block text-sm font-medium text-gray-700 mb-1">Sender ID</label>
+                            <input type="text" id="senderId" value="customer_feedback_42" required 
+                                   class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+
+                        <div class="mb-6">
+                            <label for="messageText" class="block text-sm font-medium text-gray-700 mb-1">Message Content (Try using "This is awful, I want a refund!")</label>
+                            <textarea id="messageText" rows="4" required 
+                                      class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                                      placeholder="Type a message to test the AI sentiment model..."></textarea>
+                        </div>
+
+                        <button type="submit" id="simulateButton"
+                                class="w-full py-2 px-4 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition duration-150 ease-in-out shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            Send DM Webhook
+                        </button>
+                    </form>
+
+                    <div id="dmResult" class="mt-6 p-4 rounded-lg border border-indigo-200 bg-indigo-50">
+                        <p class="text-sm font-semibold text-indigo-700">Latest Moderation Status:</p>
+                        <p id="moderationStatus" class="mt-1 text-gray-700 text-base">Awaiting first message...</p>
+                    </div>
+
+                </div>
+
+                <!-- Right Panel: Review Queue -->
+                <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-semibold text-gray-800">Manual Review Queue 
+                            (<span id="queueCount">0</span> items)
+                        </h2>
+                        <button id="refreshButton" onclick="fetchReviewQueue()" 
+                                class="py-1 px-3 bg-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-300 transition duration-150 focus:outline-none">
+                            Refresh Queue (Objective 4)
+                        </button>
+                    </div>
+
+                    <div class="mb-4 flex space-x-2">
+                        <button onclick="showClearQueueConfirmation()" 
+                                class="flex-1 py-2 px-4 bg-red-500 text-white text-sm font-bold rounded-lg hover:bg-red-600 transition duration-150 shadow-sm">
+                            Clear ALL Items (Objective 4)
+                        </button>
+                    </div>
+
+                    <div id="reviewQueue" class="scrollable-queue border border-gray-200 rounded-lg p-3 bg-gray-50">
+                        <!-- Queue items will be injected here -->
+                        <p class="text-center text-gray-500 py-6">Loading review queue...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ANALYTICS TAB (MOCK) -->
+        <div id="analytics-tab" class="tab-content hidden p-12 bg-white rounded-xl shadow-lg text-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-yellow-500 mx-auto mb-4" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.414L11 9.586V6z" clip-rule="evenodd" />
+            </svg>
+            <h2 class="text-3xl font-bold text-gray-700 mb-2">Analytics Dashboard</h2>
+            <p class="text-lg text-gray-500">This feature is coming soon to provide insights on moderation and post performance!</p>
+        </div>
+
+
+    </div>
+
+    <!-- Custom Modal for Confirmation (Replaces alert/confirm) -->
+    <div id="customModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full">
+            <h3 id="modalTitle" class="text-xl font-bold text-gray-900 mb-3">Confirm Action</h3>
+            <p id="modalMessage" class="text-gray-700 mb-6">Are you sure you want to clear the entire Manual Review Queue?</p>
+            <div class="flex justify-end space-x-3">
+                <button id="modalCancel" class="py-2 px-4 bg-gray-200 text-gray-800 font-medium rounded-lg hover:bg-gray-300 transition">Cancel</button>
+                <button id="modalConfirm" class="py-2 px-4 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition">Confirm Clear</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE_URL = 'http://localhost:8000';
+        
+        // Content Generation Elements
+        const contentForm = document.getElementById('contentForm');
+        const generateButton = document.getElementById('generateButton');
+        const scheduleButton = document.getElementById('scheduleButton');
+        const generatedPostElement = document.getElementById('generatedPost');
+        const generatedHashtagsElement = document.getElementById('generatedHashtags');
+        const schedulingResultElement = document.getElementById('schedulingResult');
+        const scheduleMessageElement = document.getElementById('scheduleMessage');
+        let currentGeneratedContent = null; // Store the generated content object globally
+
+        // Moderation Elements
+        const dmForm = document.getElementById('dmForm');
+        const reviewQueueElement = document.getElementById('reviewQueue');
+        const moderationStatusElement = document.getElementById('moderationStatus');
+        const queueCountElement = document.getElementById('queueCount');
+        
+        // General Elements
+        const statusMessageElement = document.getElementById('statusMessage');
+        const customModal = document.getElementById('customModal');
+        const modalConfirmButton = document.getElementById('modalConfirm');
+        const modalCancelButton = document.getElementById('modalCancel');
+
+        // Initial setup
+        document.addEventListener('DOMContentLoaded', () => {
+            switchTab('content'); // Start on the content tab
+            fetchReviewQueue(); // Load queue data immediately
+        });
+        
+        // --- Tab Switching Logic (Preserved) ---
+        function switchTab(activeTabId) {
+            // Hide all tab content
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+
+            // Deactivate all buttons
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active', 'text-white');
+                button.classList.add('text-gray-600', 'hover:bg-indigo-50');
+            });
+
+            // Show the active tab content
+            document.getElementById(`${activeTabId}-tab`).classList.remove('hidden');
+
+            // Activate the corresponding button
+            const activeTabButton = document.getElementById(`tab-${activeTabId}`);
+            activeTabButton.classList.add('active', 'text-white');
+            activeTabButton.classList.remove('text-gray-600', 'hover:bg-indigo-50');
+            
+            // If switching to moderation, refresh the queue
+            if (activeTabId === 'moderation') {
+                fetchReviewQueue();
+            }
+        }
+        
+        // --- Utility Functions (Preserved) ---
+
+        function displayStatus(message, type = 'success') {
+            statusMessageElement.textContent = message;
+            statusMessageElement.className = 'mb-4 p-3 rounded-lg text-sm font-medium';
+            statusMessageElement.classList.remove('hidden');
+            
+            if (type === 'error') {
+                statusMessageElement.classList.add('bg-red-100', 'text-red-700');
+            } else if (type === 'info') {
+                statusMessageElement.classList.add('bg-blue-100', 'text-blue-700');
+            } else {
+                statusMessageElement.classList.add('bg-green-100', 'text-green-700');
+            }
+            
+            setTimeout(() => {
+                statusMessageElement.classList.add('hidden');
+            }, 5000);
+        }
+        
+        // --- Content Generation & Scheduling Logic (FIXED API CALLS) ---
+
+        contentForm.addEventListener('submit', generateContent);
+
+        /**
+         * Calls the backend to generate content using Gemini API.
+         * FIX: Updated endpoint from /test/schedule to /api/content/generate
+         */
+        async function generateContent(e) {
+            e.preventDefault();
+            
+            const prompt = document.getElementById('postPrompt').value;
+            const length = document.getElementById('postLength').value;
+            const platform = document.getElementById('postPlatform').value;
+            const tone = document.getElementById('postTone').value; // Get the tone
+
+            // Clear previous results
+            generatedPostElement.textContent = 'Contacting AI for content draft...';
+            generatedHashtagsElement.textContent = '';
+            generatedPostElement.classList.add('text-gray-500', 'italic');
+            currentGeneratedContent = null; 
+            scheduleButton.disabled = true;
+
+            // Loading state
+            generateButton.disabled = true;
+            generateButton.textContent = 'Generating... (Up to 10s)';
+            
+            try {
+                // CORRECTED ENDPOINT: /api/content/generate
+                const response = await fetch(`${API_BASE_URL}/api/content/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        prompt: prompt, 
+                        length: length, 
+                        platform: platform,
+                        tone: tone // Include tone
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.json();
+                    throw new Error(`HTTP error! Status: ${response.status}. Detail: ${errorText.detail || 'Unknown error.'}`);
+                }
+
+                const result = await response.json();
+                
+                // Content generation response structure check (Expected: SocialMediaPost)
+                if (result.post_content && result.suggested_hashtags) {
+                    currentGeneratedContent = result;
+                    
+                    // Display main content
+                    generatedPostElement.textContent = result.post_content;
+                    generatedPostElement.classList.remove('text-gray-500', 'italic');
+                    
+                    // Display hashtags
+                    const hashtags = result.suggested_hashtags.map(tag => `#${tag}`).join(' ');
+                    generatedHashtagsElement.textContent = hashtags;
+
+                    scheduleButton.disabled = false;
+                    displayStatus('Content generated successfully! Review the draft.', 'info');
+                } else {
+                    generatedPostElement.textContent = 'Error: AI content response was malformed or empty.';
+                    generatedPostElement.classList.add('text-red-600', 'italic');
+                    displayStatus('Failed to generate content.', 'error');
+                }
+
+            } catch (error) {
+                console.error('Error generating content:', error);
+                generatedPostElement.textContent = `Error: Failed to connect to the backend API. ${error.message}`;
+                generatedPostElement.classList.add('text-red-600', 'italic');
+                displayStatus('Failed to generate content. Is the backend running? Check console for details.', 'error');
+            } finally {
+                generateButton.disabled = false;
+                generateButton.textContent = 'Generate Content';
+            }
+        }
+
+        /**
+         * Simulates scheduling the generated content (Objective 2 Mock).
+         * NOTE: The backend does not have a /schedule POST endpoint, so this is a client-side mock
+         * that resets the UI state to simulate a scheduled post.
+         */
+        async function schedulePost() {
+            if (!currentGeneratedContent) {
+                displayStatus('Please generate content first before scheduling.', 'error');
+                return;
+            }
+
+            const platform = currentGeneratedContent.platform || document.getElementById('postPlatform').value;
+            
+            scheduleButton.disabled = true;
+            scheduleButton.textContent = 'Scheduling...';
+            scheduleMessageElement.textContent = 'Simulating immediate scheduling...';
+            schedulingResultElement.classList.remove('hidden');
+            
+            // --- MOCK LOGIC START ---
+            // In a real application, this would be another API call. 
+            // For the mock, we simulate success and update the UI state.
+            await new Promise(r => setTimeout(r, 1000)); // Simulate API delay
+            
+            scheduleMessageElement.textContent = `SUCCESS! Post scheduled for immediate publication on ${platform}.`;
+            scheduleMessageElement.classList.add('text-green-600', 'font-bold');
+            displayStatus('Post successfully scheduled!', 'success');
+            
+            // Reset post generation context
+            currentGeneratedContent = null;
+            generatedPostElement.textContent = 'Waiting for generation...';
+            generatedHashtagsElement.textContent = '';
+            generatedPostElement.classList.add('text-gray-500', 'italic');
+            // --- MOCK LOGIC END ---
+
+            scheduleButton.disabled = false;
+            scheduleButton.textContent = 'Schedule Generated Post (Objective 2 Mock)';
+        }
+
+        // --- Moderation Test & Review Queue Logic (FIXED API CALLS) ---
+
+        dmForm.addEventListener('submit', simulateDmWebhook);
+
+        /**
+         * Simulates an incoming DM webhook (Objective 3).
+         * FIX: Updated endpoint from /dm_webhook to /api/moderation/simulate
+         */
+        async function simulateDmWebhook(e) {
+            e.preventDefault();
+            
+            const senderId = document.getElementById('senderId').value;
+            const messageText = document.getElementById('messageText').value;
+
+            simulateButton.disabled = true;
+            simulateButton.textContent = 'Sending...';
+            moderationStatusElement.textContent = 'Processing message with AI moderation model...';
+            
+            try {
+                // CORRECTED ENDPOINT: /api/moderation/simulate
+                const response = await fetch(`${API_BASE_URL}/api/moderation/simulate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sender_id: senderId, message_text: messageText })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                if (result.status === "FLAGGED") {
+                    moderationStatusElement.innerHTML = `<span class="font-bold text-red-600">FLAGGED!</span> Reason: ${result.reason}`;
+                    displayStatus('High-risk message detected and added to the queue.', 'error');
+                    fetchReviewQueue(); // Refresh queue immediately
+                } else {
+                    moderationStatusElement.innerHTML = `<span class="font-bold text-green-600">PASSED!</span> Reason: ${result.reason}`;
+                    displayStatus('Message passed moderation checks.', 'success');
+                }
+
+            } catch (error) {
+                console.error('Error simulating DM:', error);
+                moderationStatusElement.textContent = 'Error: Failed to connect to backend for moderation.';
+                displayStatus('Moderation simulation failed. Is the backend running?', 'error');
+            } finally {
+                simulateButton.disabled = false;
+                simulateButton.textContent = 'Send DM Webhook';
+            }
+        }
+
+
+        /**
+         * Fetches and displays the current manual review queue (Objective 4).
+         * FIX: Updated endpoint from /review_queue to /api/moderation/queue
+         */
+        async function fetchReviewQueue() {
+            reviewQueueElement.innerHTML = '<p class="text-center text-gray-500 py-6">Refreshing...</p>';
+            try {
+                // CORRECTED ENDPOINT: /api/moderation/queue
+                const response = await fetch(`${API_BASE_URL}/api/moderation/queue`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const items = await response.json();
+                displayReviewQueue(items);
+            } catch (error) {
+                console.error('Error fetching review queue:', error);
+                reviewQueueElement.innerHTML = '<p class="text-center text-red-500 py-6">Could not connect to backend API. Is it running?</p>';
+                queueCountElement.textContent = 'ERR';
+            }
+        }
+
+        /**
+         * Renders the list of items from the queue.
+         * NOTE: Removed single 'Resolve' button logic as the backend only supports 'Clear All'.
+         */
+        function displayReviewQueue(items) {
+            queueCountElement.textContent = items.length;
+            reviewQueueElement.innerHTML = ''; 
+
+            if (items.length === 0) {
+                reviewQueueElement.innerHTML = `
+                    <div class="text-center py-10">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-10 h-10 text-green-500 mx-auto mb-2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                        </svg>
+                        <p class="text-lg font-medium text-gray-700">Queue Clear!</p>
+                        <p class="text-sm text-gray-500">No immediate human action is required.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            items.forEach(item => {
+                const date = new Date(item.timestamp).toLocaleTimeString();
+                
+                // Determine color based on reason/risk (using mock fields if available)
+                const isHighRisk = item.reason.includes('Negative') || item.risk_level === 'HIGH';
+                const borderColor = isHighRisk ? 'border-red-500' : 'border-orange-500';
+                const reasonColor = isHighRisk ? 'text-red-600' : 'text-orange-600';
+                
+                const itemDiv = document.createElement('div');
+                itemDiv.id = `item-${item.id}`;
+                itemDiv.className = `resolved-item bg-white p-4 mb-3 border-l-4 ${borderColor} rounded-lg shadow-sm`;
+                
+                // Add the new fields if they exist in the item structure
+                const riskLevel = item.risk_level ? `<span class="font-bold text-xs p-1 rounded-md bg-yellow-100 text-yellow-800">${item.risk_level} Risk</span>` : '';
+                const category = item.category ? `<p class="text-xs text-gray-500">${item.category}</p>` : '';
+
+                itemDiv.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <p class="text-xs font-semibold text-gray-400">ID: ${item.id}</p>
+                            <p class="text-sm font-semibold ${reasonColor}">${item.reason}</p>
+                        </div>
+                        <div class="text-right">
+                            ${riskLevel}
+                            ${category}
+                            <p class="text-xs font-medium text-gray-500 mt-1">Sender: <span class="font-bold">${item.sender_id}</span></p>
+                            <p class="text-xs text-gray-500">${date}</p>
+                        </div>
+                    </div>
+                    <p class="text-gray-800 italic mb-3 text-base">"${item.message_text}"</p>
+                    <div class="p-2 bg-gray-100 rounded-md text-sm text-gray-600 text-center">
+                        Action required. Use "Clear ALL" above, or manually handle this item.
+                    </div>
+                `;
+                reviewQueueElement.appendChild(itemDiv);
+            });
+        }
+
+        /**
+         * Shows the custom modal for clearing the queue (Preserved).
+         */
+        function showClearQueueConfirmation() {
+            document.getElementById('modalTitle').textContent = 'Confirm Queue Clear';
+            document.getElementById('modalMessage').textContent = 'Are you absolutely sure you want to clear ALL items from the Manual Review Queue? This action cannot be undone.';
+            
+            modalConfirmButton.onclick = clearQueue; 
+            modalConfirmButton.textContent = 'Confirm Clear';
+            modalConfirmButton.classList.remove('bg-red-600', 'hover:bg-red-700');
+            modalConfirmButton.classList.add('bg-red-600', 'hover:bg-red-700');
+            
+            modalCancelButton.onclick = () => customModal.classList.add('hidden');
+            customModal.classList.remove('hidden');
+        }
+
+        /**
+         * Calls the clear queue endpoint (Objective 4).
+         * FIX: Updated endpoint from /review_queue/clear to /api/moderation/queue/clear
+         */
+        async function clearQueue() {
+            customModal.classList.add('hidden'); // Hide modal immediately
+
+            try {
+                // CORRECTED ENDPOINT: /api/moderation/queue/clear
+                const response = await fetch(`${API_BASE_URL}/api/moderation/queue/clear`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                await response.json(); // Consume the response
+                
+                displayStatus('Queue successfully cleared.', 'success');
+                fetchReviewQueue(); // Refresh to show the cleared state
+
+            } catch (error) {
+                console.error('Error clearing queue:', error);
+                displayStatus('Failed to clear queue. Is the backend running?', 'error');
+            }
+        }
+    </script>
+</body>
+</html>
